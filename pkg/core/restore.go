@@ -127,6 +127,17 @@ func (p *RestorePlugin) Execute(input *velero.RestoreItemActionExecuteInput) (*v
 	p.log.Debugf("Entering Hypershift restore plugin")
 	ctx := context.Context(p.ctx)
 
+	// Get the backup object
+	backupName := input.Restore.Spec.BackupName
+	backup, err := common.GetBackup(input.Restore.GetUID(), backupName, input.Restore.Namespace)
+	if err != nil {
+		p.log.Infof("[pod-restore] could not fetch backup associated with the restore, got error: %s", err.Error())
+	}
+
+	if returnEarly := common.ShouldEndPluginExecution(backup.Spec.IncludedNamespaces, p.client, p.log); returnEarly {
+		return nil, nil
+	}
+
 	kind := input.Item.GetObjectKind().GroupVersionKind().Kind
 	switch {
 	case common.MatchSuffixKind(kind, "clusters", "machines"):

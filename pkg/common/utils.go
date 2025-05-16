@@ -438,3 +438,18 @@ func ShouldEndPluginExecution(namespaces []string, client crclient.Client, log l
 	log.Debug("No Hypershift resources found")
 	return true
 }
+
+// GetBackup retrieves a backup object by name and namespace
+func GetBackup(uid types.UID, name, namespace string) (*veleroapiv1.Backup, error) {
+	client, err := GetClient()
+	if err != nil {
+		return nil, fmt.Errorf("error getting client: %v", err)
+	}
+
+	backup := &veleroapiv1.Backup{}
+	if err := client.Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, backup); err != nil {
+		return nil, fmt.Errorf("error getting backup: %v", err)
+	}
+
+	return backup, nil
+}
