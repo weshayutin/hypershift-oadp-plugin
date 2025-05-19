@@ -382,7 +382,9 @@ func RemoveLabel(metadata metav1.Object, key string) {
 func GetHCP(ctx context.Context, nsList []string, client crclient.Client, log logrus.FieldLogger) (*hyperv1.HostedControlPlane, error) {
 	for _, ns := range nsList {
 		hcpList := &hyperv1.HostedControlPlaneList{}
-		if err := client.List(ctx, hcpList, crclient.InNamespace(ns)); err != nil {
+		log.Debug("Checking namespace for HCP: " + ns)
+		if err := client.List(context.TODO(), hcpList, crclient.InNamespace(ns)); err != nil {
+			log.Debug("Error checking for HostedControlPlanes: " + err.Error())
 			return nil, fmt.Errorf("error getting HostedControlPlane: %v", err)
 		}
 
@@ -408,6 +410,8 @@ func ShouldEndPluginExecution(namespaces []string, client crclient.Client, log l
 	// Check if HostedControlPlane exists
 	hcpList := &hyperv1.HostedControlPlaneList{}
 	for _, ns := range namespaces {
+		log.Debug("WESHAY: Checking namespace for HCP: " + ns)
+		log.Info("WESHAY: Checking namespace for HCP: " + ns)
 		if err := client.List(context.TODO(), hcpList, crclient.InNamespace(ns)); err != nil {
 			log.Debugf("Error checking for HostedControlPlanes: %v", err)
 			return true
@@ -440,7 +444,7 @@ func ShouldEndPluginExecution(namespaces []string, client crclient.Client, log l
 }
 
 // GetBackup retrieves a backup object by name and namespace
-func GetBackup(uid types.UID, name, namespace string) (*veleroapiv1.Backup, error) {
+func GetBackup(name, namespace string) (*veleroapiv1.Backup, error) {
 	client, err := GetClient()
 	if err != nil {
 		return nil, fmt.Errorf("error getting client: %v", err)

@@ -11,6 +11,7 @@ import (
 	validation "github.com/openshift/hypershift-oadp-plugin/pkg/core/validation"
 	hyperv1 "github.com/openshift/hypershift/api/hypershift/v1beta1"
 	"github.com/sirupsen/logrus"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	"github.com/vmware-tanzu/velero/pkg/plugin/velero"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -127,16 +128,35 @@ func (p *RestorePlugin) Execute(input *velero.RestoreItemActionExecuteInput) (*v
 	p.log.Debugf("Entering Hypershift restore plugin")
 	ctx := context.Context(p.ctx)
 
-	// Get the backup object
-	backupName := input.Restore.Spec.BackupName
-	backup, err := common.GetBackup(input.Restore.GetUID(), backupName, input.Restore.Namespace)
+	p.log.Debug("WESHAY: get backup from restore")
+	backup := new(velerov1api.Backup)
+	err := p.client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Namespace: input.Restore.Namespace,
+			Name:      input.Restore.Spec.BackupName,
+		},
+		backup,
+	)
+
 	if err != nil {
-		p.log.Infof("[pod-restore] could not fetch backup associated with the restore, got error: %s", err.Error())
+		p.log.Error("Fail to get backup for restore.")
+		return nil, fmt.Errorf("fail to get backup for restore: %s", err.Error())
+	}
+
+	p.log.Info("WESHAY:BEGIN: if return early")
+	p.log.Debug("WESHAY:BEGIN: if return early")
+
+	if backup == nil || backup.Spec.IncludedNamespaces == nil {
+		p.log.Error("Backup or IncludedNamespaces is nil")
+		return nil, fmt.Errorf("backup or included namespaces is nil")
 	}
 
 	if returnEarly := common.ShouldEndPluginExecution(backup.Spec.IncludedNamespaces, p.client, p.log); returnEarly {
 		return nil, nil
 	}
+	p.log.Info("WESHAY:END: if return early")
+	p.log.Debug("WESHAY:END: if return early")
 
 	kind := input.Item.GetObjectKind().GroupVersionKind().Kind
 	switch {
